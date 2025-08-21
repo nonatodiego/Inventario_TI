@@ -28,12 +28,13 @@ from routes.export import export_bp
 app.register_blueprint(users_bp, url_prefix='/api')
 app.register_blueprint(export_bp, url_prefix='/api/export')
 
+# Garantir que as tabelas existam também quando rodando via gunicorn (produção)
+with app.app_context():
+    db.create_all()
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    
     app.run(debug=True, host='0.0.0.0', port=5000)
