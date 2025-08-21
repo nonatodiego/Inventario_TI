@@ -5,5 +5,5 @@
 # Proxy /api/* calls to your backend URL on Render (replace placeholder)
 [[redirects]]
   from = "/api/*"
-  to = "https://SEU-BACKEND.onrender.com/api/:splat"
+  to = "https://inventario-ti.onrender.com/api/:splat"
   status = 200
