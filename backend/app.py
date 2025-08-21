@@ -15,11 +15,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///inv
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializar extensões
-db = SQLAlchemy(app)
+from models import db  # use a instância única do models
+db.init_app(app)
 migrate = Migrate(app, db)
 CORS(app)
 
-# Importar modelos e rotas
+# Importar modelos e rotas (após init_app)
 from models import User, Asset
 from routes.users import users_bp
 from routes.export import export_bp
