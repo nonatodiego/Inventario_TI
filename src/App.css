@@ -1,0 +1,33 @@
+/* App specific styles */
+.app-container {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.main-content {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    padding: 2rem;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
