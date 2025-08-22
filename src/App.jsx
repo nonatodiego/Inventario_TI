@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge.jsx'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx'
 import { Checkbox } from '@/components/ui/checkbox.jsx'
 import { Label } from '@/components/ui/label.jsx'
-import { Users, Edit, Trash2, Search, Smartphone, Headphones, Monitor, BarChart3, Mouse, Keyboard, ChevronDown, ChevronUp } from 'lucide-react'
+import { Users, Edit, Trash2, Search, Smartphone, Headphones, Monitor, Laptop, Server, PanelsTopLeft, BarChart3, Mouse, Keyboard, ChevronDown, ChevronUp, FileText, FileSpreadsheet } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts'
 import './App.css'
 
@@ -408,6 +408,16 @@ function App() {
     window.open(url, '_blank')
   }
 
+  // Exportação Excel
+  const handleExportExcel = () => {
+    const params = new URLSearchParams()
+    if (searchTerm) params.append('search', searchTerm)
+    if (selectedSetor) params.append('setor', selectedSetor)
+    if (selectedGestor) params.append('gestor', selectedGestor)
+    const url = `/api/export/excel${params.toString() ? `?${params.toString()}` : ''}`
+    window.open(url, '_blank')
+  }
+
 
   // Removido: exportação em PDF
 
@@ -461,7 +471,7 @@ function App() {
               <div className="flex items-center justify-center">
                 <Smartphone className="h-8 w-8 text-green-600" />
                 <div className="ml-4 text-center">
-                  <p className="text-sm font-medium text-gray-600">Celulares</p>
+                  <Badge variant="phone">Celulares</Badge>
                   <p className="text-2xl font-bold text-gray-900">
                     {users.filter(user => {
                       const assets = user.assets && user.assets.length > 0 ? user.assets[0] : {}
@@ -478,7 +488,7 @@ function App() {
               <div className="flex items-center justify-center">
                 <Headphones className="h-8 w-8 text-purple-600" />
                 <div className="ml-4 text-center">
-                  <p className="text-sm font-medium text-gray-600">Headsets</p>
+                  <Badge variant="audio">Headsets</Badge>
                   <p className="text-2xl font-bold text-gray-900">
                     {users.filter(user => {
                       const assets = user.assets && user.assets.length > 0 ? user.assets[0] : {}
@@ -493,9 +503,9 @@ function App() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-center">
-                <Monitor className="h-8 w-8 text-orange-600" />
+                <PanelsTopLeft className="h-8 w-8 text-orange-600" />
                 <div className="ml-4 text-center">
-                  <p className="text-sm font-medium text-gray-600">Segunda Tela</p>
+                  <Badge variant="secondScreen">Segunda Tela</Badge>
                   <p className="text-2xl font-bold text-gray-900">
                     {users.filter(user => user.segunda_tela).length}
                   </p>
@@ -662,8 +672,12 @@ function App() {
                   Limpar Filtros
                 </Button>
 
-                <Button variant="outline" className="h-10 shrink-0" onClick={handleExportPDF}>
-                  Exportar PDF
+                <Button variant="destructive" className="h-10 shrink-0" onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4 mr-2" /> Exportar PDF
+                </Button>
+
+                <Button variant="successOutline" className="h-10 shrink-0" onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
                 </Button>
                 
                 {isAdmin && (
@@ -711,41 +725,48 @@ function App() {
                       
                       <div className="flex flex-wrap gap-2">
                         {user.desktop_notebook && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Monitor className="h-3 w-3" />
+                          <Badge 
+                            variant={user.desktop_notebook === 'Notebook' ? 'notebook' : 'desktop'} 
+                            className="flex items-center gap-1"
+                          >
+                            {user.desktop_notebook === 'Notebook' ? (
+                              <Laptop className="h-3 w-3" />
+                            ) : (
+                              <Server className="h-3 w-3" />
+                            )}
                             {user.desktop_notebook}
                           </Badge>
                         )}
                         {user.segunda_tela && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Monitor className="h-3 w-3" />
+                          <Badge variant="secondScreen" className="flex items-center gap-1">
+                            <PanelsTopLeft className="h-3 w-3" />
                             Segunda Tela
                           </Badge>
                         )}
                         {assets.celular_corporativo && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
+                          <Badge variant="phone" className="flex items-center gap-1">
                             <Smartphone className="h-3 w-3" />
                             Celular
                           </Badge>
                         )}
                         {assets.headset && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
+                          <Badge variant="audio" className="flex items-center gap-1">
                             <Headphones className="h-3 w-3" />
                             Headset
                           </Badge>
                         )}
                         {assets.mouse_sem_fio && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
+                          <Badge variant="mouse" className="flex items-center gap-1">
                             <Mouse className="h-3 w-3" />
                             Mouse
                           </Badge>
                         )}
                         {assets.teclado_sem_fio && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Keyboard className="h-3 w-3" />
-                            Teclado
-                          </Badge>
-                        )}
+                            <Badge variant="keyboard" className="flex items-center gap-1">
+                              <Keyboard className="h-3 w-3" />
+                              Teclado
+                            </Badge>
+                          )}
                         {user.licenca_office && (
                           <Badge variant="outline">
                             {user.licenca_office}

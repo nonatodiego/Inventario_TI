@@ -7,7 +7,8 @@ export const Button = ({ children, onClick, className = '', variant = 'default',
     default: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
     secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
     destructive: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500'
+    outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500',
+    successOutline: 'border border-green-600 text-green-700 bg-white hover:bg-green-50 focus:ring-green-500'
   }
   
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : ''
