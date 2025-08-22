@@ -243,7 +243,12 @@ function App() {
               teclado_sem_fio: !!formData.teclado_sem_fio,
             })
           })
-          if (!res.ok) throw new Error('Falha ao atualizar no backend')
+          if (!res.ok) {
+            let msg = 'Falha ao atualizar no backend'
+            try { const j = await res.json(); if (j?.message) msg = j.message } catch (_) {}
+            showToast(msg, 'destructive')
+            throw new Error(msg)
+          }
         } else {
           const res = await fetch(`/api/users`, {
             method: 'POST',
@@ -263,7 +268,12 @@ function App() {
               teclado_sem_fio: !!formData.teclado_sem_fio,
             })
           })
-          if (!res.ok) throw new Error('Falha ao criar no backend')
+          if (!res.ok) {
+            let msg = 'Falha ao criar no backend'
+            try { const j = await res.json(); if (j?.message) msg = j.message } catch (_) {}
+            showToast(msg, 'destructive')
+            throw new Error(msg)
+          }
         }
         // Recarregar lista do backend para refletir mudanças
         await fetchUsers()
@@ -727,12 +737,21 @@ function App() {
                       </div>
                     </div>
                     
-                    {/* Controles de edição/exclusão desativados (somente leitura) */}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                    {isAdmin && (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={() => handleEdit(user)}>
+                        <Edit className="h-4 w-4 mr-1" /> Editar
+                      </Button>
+                      <Button variant="outline" onClick={() => openConfirmDelete(user)}>
+                        <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
         </div>
 
         {filteredUsers.length === 0 && (
@@ -885,35 +904,23 @@ function App() {
           </Dialog>
         )}
 
-        {/* Dialog de Confirmação de Exclusão */}
-        <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Confirmar exclusão</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p>
-                Tem certeza que deseja excluir o usuário{' '}
-                <span className="font-semibold">{userToDelete?.nome_usuario}</span>?
-                Esta ação não pode ser desfeita.
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => { setIsConfirmOpen(false); setUserToDelete(null) }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => { if (userToDelete) { handleDelete(userToDelete.id) }; setIsConfirmOpen(false); setUserToDelete(null) }}
-                >
-                  Excluir
-                </Button>
+        {/* Confirmação de Exclusão */}
+        {isAdmin && (
+          <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirmar exclusão</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p>Tem certeza que deseja excluir o usuário <strong>{userToDelete?.nome_usuario}</strong>?</p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>Cancelar</Button>
+                  <Button variant="outline" onClick={async () => { await handleDelete(userToDelete?.id); setIsConfirmOpen(false); }}>Excluir</Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Toast */}
         {toast.visible && (
