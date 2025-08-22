@@ -397,6 +397,17 @@ function App() {
     setSelectedGestor('')
   }
 
+  // Exportação PDF
+  const handleExportPDF = () => {
+    const params = new URLSearchParams()
+    if (searchTerm) params.append('search', searchTerm)
+    if (selectedSetor) params.append('setor', selectedSetor)
+    if (selectedGestor) params.append('gestor', selectedGestor)
+    const url = `/api/export/pdf${params.toString() ? `?${params.toString()}` : ''}`
+    // Abrir em nova aba/janela para baixar
+    window.open(url, '_blank')
+  }
+
 
   // Removido: exportação em PDF
 
@@ -649,6 +660,10 @@ function App() {
                 
                 <Button variant="outline" className="h-10 shrink-0" onClick={clearFilters}>
                   Limpar Filtros
+                </Button>
+
+                <Button variant="outline" className="h-10 shrink-0" onClick={handleExportPDF}>
+                  Exportar PDF
                 </Button>
                 
                 {isAdmin && (
