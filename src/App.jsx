@@ -221,13 +221,6 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Se não estiver editando, criação está desativada
-    if (!editingUser) {
-      showToast('Criação de usuários está desativada', 'secondary')
-      setIsDialogOpen(false)
-      return
-    }
-
     // Preferir backend quando habilitado
     if (USE_BACKEND) {
       try {
@@ -251,10 +244,30 @@ function App() {
             })
           })
           if (!res.ok) throw new Error('Falha ao atualizar no backend')
+        } else {
+          const res = await fetch(`/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nome_usuario: formData.nome_usuario,
+              matricula: formData.matricula,
+              setor: formData.setor,
+              nome_gestor: formData.nome_gestor,
+              localizacao: formData.localizacao,
+              desktop_notebook: formData.desktop_notebook,
+              segunda_tela: !!formData.segunda_tela,
+              licenca_office: formData.licenca_office,
+              celular_corporativo: !!formData.celular_corporativo,
+              headset: !!formData.headset,
+              mouse_sem_fio: !!formData.mouse_sem_fio,
+              teclado_sem_fio: !!formData.teclado_sem_fio,
+            })
+          })
+          if (!res.ok) throw new Error('Falha ao criar no backend')
         }
         // Recarregar lista do backend para refletir mudanças
         await fetchUsers()
-        showToast('Usuário atualizado', 'success')
+        showToast(editingUser ? 'Usuário atualizado' : 'Usuário criado', 'success')
         setIsDialogOpen(false)
         resetForm()
         return
@@ -277,6 +290,21 @@ function App() {
       )
       saveUsersToStorage(updatedUsers)
       showToast('Atualizado (modo local)', 'secondary')
+    } else {
+      const newId = users.length ? Math.max(...users.map(u => Number(u.id) || 0)) + 1 : 1
+      const newUser = {
+        id: newId,
+        ...formData,
+        assets: [{
+          celular_corporativo: formData.celular_corporativo,
+          headset: formData.headset,
+          mouse_sem_fio: formData.mouse_sem_fio,
+          teclado_sem_fio: formData.teclado_sem_fio
+        }]
+      }
+      const updated = [...users, newUser]
+      saveUsersToStorage(updated)
+      showToast('Criado (modo local)', 'secondary')
     }
     setIsDialogOpen(false)
     resetForm()
@@ -613,7 +641,11 @@ function App() {
                   Limpar Filtros
                 </Button>
                 
-                {/* Criação de usuários desativada por requisito */}
+                {isAdmin && (
+                  <Button className="h-10 shrink-0" onClick={openNewUserDialog}>
+                    Novo Usuário
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
