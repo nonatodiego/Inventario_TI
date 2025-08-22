@@ -16,6 +16,17 @@ function App() {
   const [user, setUser] = useState(null)
   const [users, setUsers] = useState([])
   const [filteredUsers, setFilteredUsers] = useState([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(100)
+  const [total, setTotal] = useState(0)
+  const [pages, setPages] = useState(1)
+  const [stats, setStats] = useState({
+    total: 0,
+    segunda_tela: 0,
+    ativos: { celulares: 0, headsets: 0 },
+    equipamentos: { desktop: 0, notebook: 0, nao_informado: 0 },
+    licencas: { 'O365 E1': 0, 'O365 E3': 0, 'Office 2019': 0, 'Sem licença': 0 }
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSetor, setSelectedSetor] = useState('')
   const [selectedGestor, setSelectedGestor] = useState('')
@@ -52,13 +63,17 @@ function App() {
     } catch (_) {}
     setLoading(false)
     fetchUsers()
+    fetchStats()
   }, [])
 
 
-  // Filtrar usuários
+  // Filtrar usuários (frontend) apenas quando sem backend; com backend os filtros são aplicados no servidor
   useEffect(() => {
+    if (USE_BACKEND) {
+      setFilteredUsers(users)
+      return
+    }
     let filtered = users
-    
     if (searchTerm) {
       filtered = filtered.filter(user => 
         user.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,15 +81,12 @@ function App() {
         (user.setor && user.setor.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     }
-    
     if (selectedSetor) {
       filtered = filtered.filter(user => user.setor === selectedSetor)
     }
-    
     if (selectedGestor) {
       filtered = filtered.filter(user => user.nome_gestor === selectedGestor)
     }
-    
     setFilteredUsers(filtered)
   }, [users, searchTerm, selectedSetor, selectedGestor])
 
@@ -102,22 +114,45 @@ function App() {
     setGestores(uniqueGestores)
   }, [users])
 
+  // Recarregar dados quando filtros mudarem (backend)
+  useEffect(() => {
+    if (!USE_BACKEND) return
+    // Reinicia para a primeira página ao alterar filtros
+    setPage(1)
+    fetchUsers({ pageArg: 1, pageSizeArg: pageSize, searchArg: searchTerm, setorArg: selectedSetor, gestorArg: selectedGestor })
+    fetchStats({ searchArg: searchTerm, setorArg: selectedSetor, gestorArg: selectedGestor })
+  }, [searchTerm, selectedSetor, selectedGestor])
+
 
   const saveUsersToStorage = (list) => {
-    try {
-      localStorage.setItem('inventory_users', JSON.stringify(list))
-    } catch (_) {}
+    // Evitar localStorage quando usando backend para não estourar quota
+    if (!USE_BACKEND) {
+      try {
+        localStorage.setItem('inventory_users', JSON.stringify(list))
+      } catch (_) {}
+    }
     setUsers(list)
   }
 
-  const fetchUsers = async () => {
+  const fetchUsers = async ({ pageArg = page, pageSizeArg = pageSize, searchArg = searchTerm, setorArg = selectedSetor, gestorArg = selectedGestor } = {}) => {
     // Tenta carregar do backend primeiro
     if (USE_BACKEND) {
       try {
-        const res = await fetch('/api/users')
+        const params = new URLSearchParams()
+        params.set('page', String(pageArg))
+        params.set('page_size', String(pageSizeArg))
+        if (searchArg) params.set('search', searchArg)
+        if (setorArg) params.set('setor', setorArg)
+        if (gestorArg) params.set('gestor', gestorArg)
+        const res = await fetch(`/api/users?${params.toString()}`)
         if (res.ok) {
           const data = await res.json()
-          saveUsersToStorage(data)
+          const items = Array.isArray(data.items) ? data.items : []
+          saveUsersToStorage(items)
+          setTotal(Number(data.total) || 0)
+          setPage(Number(data.page) || 1)
+          setPageSize(Number(data.page_size) || 100)
+          setPages(Number(data.pages) || 1)
           return
         }
       } catch (_) {}
@@ -187,6 +222,21 @@ function App() {
       }
     ]
     saveUsersToStorage(mockUsers)
+  }
+
+  const fetchStats = async ({ searchArg = searchTerm, setorArg = selectedSetor, gestorArg = selectedGestor } = {}) => {
+    if (!USE_BACKEND) return
+    try {
+      const params = new URLSearchParams()
+      if (searchArg) params.set('search', searchArg)
+      if (setorArg) params.set('setor', setorArg)
+      if (gestorArg) params.set('gestor', gestorArg)
+      const res = await fetch(`/api/users/stats?${params.toString()}`)
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data)
+      }
+    } catch (_) {}
   }
 
   // Removido: fetchGestores (gestores agora são derivados de users)
@@ -277,6 +327,7 @@ function App() {
         }
         // Recarregar lista do backend para refletir mudanças
         await fetchUsers()
+        await fetchStats()
         showToast(editingUser ? 'Usuário atualizado' : 'Usuário criado', 'success')
         setIsDialogOpen(false)
         resetForm()
@@ -300,6 +351,7 @@ function App() {
       )
       saveUsersToStorage(updatedUsers)
       showToast('Atualizado (modo local)', 'secondary')
+      fetchStats()
     } else {
       const newId = users.length ? Math.max(...users.map(u => Number(u.id) || 0)) + 1 : 1
       const newUser = {
@@ -315,6 +367,7 @@ function App() {
       const updated = [...users, newUser]
       saveUsersToStorage(updated)
       showToast('Criado (modo local)', 'secondary')
+      fetchStats()
     }
     setIsDialogOpen(false)
     resetForm()
@@ -355,6 +408,7 @@ function App() {
         if (!res.ok) throw new Error('Falha ao excluir no backend')
         const updatedUsers = users.filter(user => String(user.id) !== targetId)
         saveUsersToStorage(updatedUsers)
+        await fetchStats()
         showToast('Usuário excluído com sucesso', 'success')
         return
       } catch (e) {
@@ -365,6 +419,7 @@ function App() {
     // Fallback local
     const updatedUsers = users.filter(user => String(user.id) !== targetId)
     saveUsersToStorage(updatedUsers)
+    fetchStats()
     showToast('Usuário excluído (modo local)', 'secondary')
   }
 
@@ -430,6 +485,44 @@ function App() {
           <h1 className="text-2xl font-bold mb-4">Inventário de Ativos de TI</h1>
           <p>Carregando...</p>
         </div>
+
+        {/* Paginação */}
+        {USE_BACKEND && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-600">
+              {(() => {
+                const start = total === 0 ? 0 : (page - 1) * pageSize + 1
+                const end = (page - 1) * pageSize + users.length
+                return `Mostrando ${start}–${end} de ${total}`
+              })()}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                disabled={page <= 1}
+                onClick={() => {
+                  const newPage = Math.max(1, page - 1)
+                  setPage(newPage)
+                  fetchUsers({ pageArg: newPage, pageSizeArg: pageSize, searchArg: searchTerm, setorArg: selectedSetor, gestorArg: selectedGestor })
+                }}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-700">Página {page} de {pages}</span>
+              <Button 
+                variant="outline" 
+                disabled={page >= pages}
+                onClick={() => {
+                  const newPage = Math.min(pages, page + 1)
+                  setPage(newPage)
+                  fetchUsers({ pageArg: newPage, pageSizeArg: pageSize, searchArg: searchTerm, setorArg: selectedSetor, gestorArg: selectedGestor })
+                }}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -460,7 +553,7 @@ function App() {
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4 text-center">
                   <p className="text-sm font-medium text-gray-600">Total de Usuários</p>
-                  <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{USE_BACKEND ? stats.total : users.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -472,8 +565,7 @@ function App() {
                 <Smartphone className="h-8 w-8 text-green-600" />
                 <div className="ml-4 text-center">
                   <Badge variant="phone">Celulares</Badge>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {users.filter(user => {
+                  <p className="text-2xl font-bold text-gray-900">{USE_BACKEND ? stats.ativos?.celulares ?? 0 : users.filter(user => {
                       const assets = user.assets && user.assets.length > 0 ? user.assets[0] : {}
                       return assets.celular_corporativo
                     }).length}
@@ -489,8 +581,7 @@ function App() {
                 <Headphones className="h-8 w-8 text-purple-600" />
                 <div className="ml-4 text-center">
                   <Badge variant="audio">Headsets</Badge>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {users.filter(user => {
+                  <p className="text-2xl font-bold text-gray-900">{USE_BACKEND ? stats.ativos?.headsets ?? 0 : users.filter(user => {
                       const assets = user.assets && user.assets.length > 0 ? user.assets[0] : {}
                       return assets.headset
                     }).length}
@@ -506,9 +597,7 @@ function App() {
                 <Layers className="h-8 w-8 text-orange-600" />
                 <div className="ml-4 text-center">
                   <Badge variant="secondScreen">Segunda Tela</Badge>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {users.filter(user => user.segunda_tela).length}
-                  </p>
+                  <p className="text-2xl font-bold text-gray-900">{USE_BACKEND ? stats.segunda_tela : users.filter(user => user.segunda_tela).length}</p>
                 </div>
               </div>
             </CardContent>
@@ -550,20 +639,18 @@ function App() {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={[
-                          {
-                            name: 'Desktop',
-                            value: users.filter(user => user.desktop_notebook === 'Desktop').length
-                          },
-                          {
-                            name: 'Notebook',
-                            value: users.filter(user => user.desktop_notebook === 'Notebook').length
-                          },
-                          {
-                            name: 'Não informado',
-                            value: users.filter(user => !user.desktop_notebook || user.desktop_notebook === '').length
-                          }
-                        ].filter(item => item.value > 0)}
+                        data={(USE_BACKEND
+                          ? [
+                              { name: 'Desktop', value: stats.equipamentos?.desktop ?? 0 },
+                              { name: 'Notebook', value: stats.equipamentos?.notebook ?? 0 },
+                              { name: 'Não informado', value: stats.equipamentos?.nao_informado ?? 0 }
+                            ]
+                          : [
+                              { name: 'Desktop', value: users.filter(user => user.desktop_notebook === 'Desktop').length },
+                              { name: 'Notebook', value: users.filter(user => user.desktop_notebook === 'Notebook').length },
+                              { name: 'Não informado', value: users.filter(user => !user.desktop_notebook || user.desktop_notebook === '').length }
+                            ]
+                        ).filter(item => item.value > 0)}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -589,24 +676,20 @@ function App() {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Licenças Office</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={[
-                      {
-                        name: 'O365 E1',
-                        quantidade: users.filter(user => user.licenca_office === 'O365 E1').length
-                      },
-                      {
-                        name: 'O365 E3',
-                        quantidade: users.filter(user => user.licenca_office === 'O365 E3').length
-                      },
-                      {
-                        name: 'Office 2019',
-                        quantidade: users.filter(user => user.licenca_office === 'Office 2019').length
-                      },
-                      {
-                        name: 'Sem licença',
-                        quantidade: users.filter(user => !user.licenca_office || user.licenca_office === '').length
-                      }
-                    ].filter(item => item.quantidade > 0)}>
+                    <BarChart data={(USE_BACKEND
+                      ? [
+                          { name: 'O365 E1', quantidade: stats.licencas?.['O365 E1'] ?? 0 },
+                          { name: 'O365 E3', quantidade: stats.licencas?.['O365 E3'] ?? 0 },
+                          { name: 'Office 2019', quantidade: stats.licencas?.['Office 2019'] ?? 0 },
+                          { name: 'Sem licença', quantidade: stats.licencas?.['Sem licença'] ?? 0 }
+                        ]
+                      : [
+                          { name: 'O365 E1', quantidade: users.filter(user => user.licenca_office === 'O365 E1').length },
+                          { name: 'O365 E3', quantidade: users.filter(user => user.licenca_office === 'O365 E3').length },
+                          { name: 'Office 2019', quantidade: users.filter(user => user.licenca_office === 'Office 2019').length },
+                          { name: 'Sem licença', quantidade: users.filter(user => !user.licenca_office || user.licenca_office === '').length }
+                        ]
+                    ).filter(item => item.quantidade > 0)}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />

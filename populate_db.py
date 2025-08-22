@@ -1,6 +1,6 @@
 import os
 import sys
-import pandas as pd
+from openpyxl import load_workbook
 
 # Adicionar o diretório src ao path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -57,46 +57,75 @@ def populate_database():
         
         db.session.commit()
         
-        # Carregar dados da planilha
+        # Carregar dados da planilha (sem pandas)
         excel_file = '/home/ubuntu/upload/Planilha_Ativos_TI.xlsx'
-        df = pd.read_excel(excel_file)
-        
-        print(f"Carregando {len(df)} registros da planilha...")
-        
-        for index, row in df.iterrows():
-            # Verificar se o usuário já existe
-            existing_user = User.query.filter_by(nome_usuario=row['Nome do Usuário']).first()
-            if existing_user:
-                print(f"Usuário {row['Nome do Usuário']} já existe, pulando...")
+        wb = load_workbook(excel_file, data_only=True)
+        ws = wb.active
+
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            print('Planilha vazia. Nada a importar.')
+            return
+
+        headers = [str(h).strip() if h is not None else '' for h in rows[0]]
+        index_by_header = {str(h).strip(): i for i, h in enumerate(headers)}
+
+        def get_val(row_vals, name, default=None):
+            i = index_by_header.get(name, None)
+            if i is None or i >= len(row_vals):
+                return default
+            v = row_vals[i]
+            return v if v is not None else default
+
+        def as_bool(v):
+            if v is None:
+                return False
+            s = str(v).strip().lower()
+            return s in {'sim', 'yes', 'true', '1', 'y'} or v is True or v == 1
+
+        total = max(0, len(rows) - 1)
+        print(f"Carregando {total} registros da planilha...")
+
+        for idx, r in enumerate(rows[1:]):
+            nome_usuario = get_val(r, 'Nome do Usuário')
+            if not nome_usuario:
+                # Pula linhas sem nome
                 continue
-            
+
+            # Verificar se o usuário já existe
+            existing_user = User.query.filter_by(nome_usuario=nome_usuario).first()
+            if existing_user:
+                print(f"Usuário {nome_usuario} já existe, pulando...")
+                continue
+
             # Criar usuário
             user = User(
-                nome_usuario=row['Nome do Usuário'],
-                matricula=f"MAT{1000 + index}",  # Gerar matrícula fictícia
-                setor=row['Setor'],
-                nome_gestor=row['Nome do Gestor'],
-                localizacao=row['Localização'],
-                desktop_notebook=row['Desktop / Notebook'],
-                segunda_tela=row['Segunda Tela'] == 'Sim',
-                licenca_office=row['Licença de Office']
+                nome_usuario=nome_usuario,
+                matricula=f"MAT{1000 + idx}",  # Gerar matrícula fictícia (compatível com lógica anterior)
+                setor=get_val(r, 'Setor'),
+                nome_gestor=get_val(r, 'Nome do Gestor'),
+                localizacao=get_val(r, 'Localização'),
+                desktop_notebook=get_val(r, 'Desktop / Notebook'),
+                segunda_tela=as_bool(get_val(r, 'Segunda Tela')),
+                licenca_office=get_val(r, 'Licença de Office')
             )
-            
+
             db.session.add(user)
             db.session.flush()  # Para obter o ID do usuário
-            
+
             # Criar ativos
+            mouse_teclado = as_bool(get_val(r, 'Mouse e teclado sem fio'))
             asset = Asset(
                 user_id=user.id,
-                celular_corporativo=row['Celular Corporativo'] == 'Sim',
-                headset=row['Headset'] == 'Sim',
-                mouse_sem_fio=row['Mouse e teclado sem fio'] == 'Sim',
-                teclado_sem_fio=row['Mouse e teclado sem fio'] == 'Sim'  # Assumindo que mouse e teclado são juntos
+                celular_corporativo=as_bool(get_val(r, 'Celular Corporativo')),
+                headset=as_bool(get_val(r, 'Headset')),
+                mouse_sem_fio=mouse_teclado,
+                teclado_sem_fio=mouse_teclado  # Assumindo que mouse e teclado são juntos
             )
-            
+
             db.session.add(asset)
-            
-            print(f"Adicionado: {row['Nome do Usuário']}")
+
+            print(f"Adicionado: {nome_usuario}")
         
         db.session.commit()
         print("Banco de dados populado com sucesso!")
