@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Login from '@/components/Login.jsx'
 import { Button } from '@/components/ui/button.jsx'
 import { Input } from '@/components/ui/input.jsx'
@@ -27,6 +27,8 @@ function App() {
   const [showCharts, setShowCharts] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef(null)
   const [formData, setFormData] = useState({
     nome_usuario: '',
     matricula: '',
@@ -397,6 +399,42 @@ function App() {
     setSelectedGestor('')
   }
 
+  // Importação de planilha (admin)
+  const handleImportClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click()
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    if (!USE_BACKEND) {
+      showToast('Importação requer backend ativo', 'destructive')
+      e.target.value = ''
+      return
+    }
+    try {
+      setImporting(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/import', { method: 'POST', body: form })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        const msg = data?.message || 'Falha ao importar planilha'
+        showToast(msg, 'destructive', 4000)
+        return
+      }
+      // Mostrar resumo
+      const msg = `Importado: ${data.created} criados, ${data.updated} atualizados, ${data.skipped} ignorados.`
+      showToast(msg, 'success', 4000)
+      await fetchUsers()
+    } catch (_) {
+      showToast('Erro ao enviar planilha', 'destructive', 4000)
+    } finally {
+      setImporting(false)
+      if (e.target) e.target.value = ''
+    }
+  }
+
 
   // Removido: exportação em PDF
 
@@ -652,9 +690,21 @@ function App() {
                 </Button>
                 
                 {isAdmin && (
-                  <Button className="h-10 shrink-0" onClick={openNewUserDialog}>
-                    Novo Usuário
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button className="h-10 shrink-0" onClick={openNewUserDialog}>
+                      Novo Usuário
+                    </Button>
+                    <Button variant="outline" className="h-10 shrink-0" onClick={handleImportClick} disabled={importing}>
+                      {importing ? 'Importando...' : 'Importar Planilha'}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.csv"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
                 )}
               </div>
             </div>
