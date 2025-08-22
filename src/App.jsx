@@ -672,12 +672,14 @@ function App() {
                   Limpar Filtros
                 </Button>
 
-                <Button variant="destructive" className="h-10 shrink-0" onClick={handleExportPDF}>
-                  <FileText className="h-4 w-4 mr-2" /> Exportar PDF
+                <Button variant="destructive" className="h-10 shrink-0 px-3 sm:px-4 text-sm sm:text-base" onClick={handleExportPDF}>
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Exportar PDF</span>
                 </Button>
 
-                <Button variant="successOutline" className="h-10 shrink-0" onClick={handleExportExcel}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
+                <Button variant="successOutline" className="h-10 shrink-0 px-3 sm:px-4 text-sm sm:text-base" onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Exportar Excel</span>
                 </Button>
                 
                 {isAdmin && (
