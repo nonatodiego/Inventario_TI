@@ -196,6 +196,18 @@ function App() {
     setUser(null)
   }
 
+  // Toast simples (deve ficar antes de qualquer return condicional para manter a ordem dos hooks)
+  const [toast, setToast] = useState({ visible: false, message: '', variant: 'success' })
+  const showToast = (message, variant = 'success', timeout = 2500) => {
+    setToast({ visible: true, message, variant })
+    window.setTimeout(() => setToast({ visible: false, message: '', variant }), timeout)
+  }
+  const getToastClass = (variant) => {
+    const base = 'fixed bottom-4 right-4 px-4 py-2 rounded-md text-white shadow-lg z-[9999]'
+    const color = variant === 'destructive' ? 'bg-red-600' : (variant === 'secondary' ? 'bg-gray-800' : 'bg-green-600')
+    return `${base} ${color}`
+  }
+
   // Exibir tela de login quando não autenticado
   if (!user) {
     return <Login onLogin={handleLogin} />
@@ -290,18 +302,7 @@ function App() {
     setIsConfirmOpen(true)
   }
 
-  // Toast simples
-  const [toast, setToast] = useState({ visible: false, message: '', variant: 'success' })
-  const showToast = (message, variant = 'success', timeout = 2500) => {
-    setToast({ visible: true, message, variant })
-    window.setTimeout(() => setToast({ visible: false, message: '', variant }), timeout)
-  }
-
-  const getToastClass = (variant) => {
-    const base = 'fixed bottom-4 right-4 px-4 py-2 rounded-md text-white shadow-lg z-[9999]'
-    const color = variant === 'destructive' ? 'bg-red-600' : (variant === 'secondary' ? 'bg-gray-800' : 'bg-green-600')
-    return `${base} ${color}`
-  }
+  
 
   const handleDelete = async (userId) => {
     const targetId = String(userId)
