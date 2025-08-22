@@ -17,29 +17,15 @@ function Login({ onLogin }) {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        // Salvar token no localStorage
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        onLogin(data.user, data.token)
-      } else {
-        setError(data.message || 'Erro ao fazer login')
+      const u = formData.username.trim()
+      const p = formData.password
+      if (u === 'ti.administrador' && p === 't1.4dministrador') {
+        const user = { username: 'ti.administrador', role: 'admin' }
+        onLogin(user)
+        return
       }
-    } catch (error) {
-      console.error('Erro ao fazer login:', error)
-      setError('Erro de conexão. Tente novamente.')
+      setError('Usuário ou senha inválidos')
     } finally {
       setLoading(false)
     }
@@ -105,10 +91,10 @@ function Login({ onLogin }) {
           </form>
           
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h4 className="font-medium text-blue-900 mb-2">Credenciais de Teste:</h4>
+            <h4 className="font-medium text-blue-900 mb-2">Acesso:</h4>
             <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Administrador:</strong> admin / admin123</p>
-              <p><strong>Consulta:</strong> consulta / consulta123</p>
+              <p><strong>Usuário:</strong> ti.administrador</p>
+              <p><strong>Senha:</strong> t1.4dministrador</p>
             </div>
           </div>
         </CardContent>

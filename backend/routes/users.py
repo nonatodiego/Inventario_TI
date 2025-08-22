@@ -39,51 +39,8 @@ def get_users():
 
 @users_bp.route('/users', methods=['POST'])
 def create_user():
-    """Criar novo usuário"""
-    try:
-
-        data = request.get_json()
-
-        # Validações obrigatórias
-        if not data.get('nome_usuario') or not data.get('matricula'):
-            return jsonify({'message': 'Nome e matrícula são obrigatórios'}), 400
-
-        # Verificar se matrícula já existe
-        if User.query.filter_by(matricula=data['matricula']).first():
-            return jsonify({'message': 'Matrícula já existe'}), 400
-
-        # Criar usuário
-        user = User(
-            nome_usuario=data['nome_usuario'],
-            matricula=data['matricula'],
-            setor=data.get('setor'),
-            nome_gestor=data.get('nome_gestor'),
-            localizacao=data.get('localizacao'),
-            desktop_notebook=data.get('desktop_notebook'),
-            segunda_tela=data.get('segunda_tela', False),
-            licenca_office=data.get('licenca_office')
-        )
-
-        db.session.add(user)
-        db.session.flush()  # Para obter o ID do usuário
-
-        # Criar ativos associados
-        asset = Asset(
-            user_id=user.id,
-            celular_corporativo=data.get('celular_corporativo', False),
-            headset=data.get('headset', False),
-            mouse_sem_fio=data.get('mouse_sem_fio', False),
-            teclado_sem_fio=data.get('teclado_sem_fio', False)
-        )
-
-        db.session.add(asset)
-        db.session.commit()
-
-        return jsonify(user.to_dict()), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': 'Erro interno do servidor'}), 500
+    """Criação de usuários desativada"""
+    return jsonify({'message': 'Criação de usuários está desativada'}), 403
 
 @users_bp.route('/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
@@ -127,18 +84,8 @@ def update_user(user_id):
 
 @users_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """Deletar usuário"""
-    try:
-
-        user = User.query.get_or_404(user_id)
-        db.session.delete(user)
-        db.session.commit()
-
-        return jsonify({'message': 'Usuário deletado com sucesso'}), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'message': 'Erro interno do servidor'}), 500
+    """Exclusão de usuários desativada"""
+    return jsonify({'message': 'Exclusão de usuários está desativada'}), 403
 
 @users_bp.route('/setores', methods=['GET'])
 def get_setores():

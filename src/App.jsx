@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Login from '@/components/Login.jsx'
 import { Button } from '@/components/ui/button.jsx'
 import { Input } from '@/components/ui/input.jsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx'
@@ -12,7 +13,7 @@ import './App.css'
 
 function App() {
   const USE_BACKEND = true
-  const [user, setUser] = useState({ username: 'Admin', role: 'admin' })
+  const [user, setUser] = useState(null)
   const [users, setUsers] = useState([])
   const [filteredUsers, setFilteredUsers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,8 +42,14 @@ function App() {
     teclado_sem_fio: false
   })
 
-  // Carregar dados ao inicializar a aplicação
+  // Carregar usuário autenticado e dados ao inicializar
   useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem('auth_user')
+      if (storedUser) {
+        setUser(JSON.parse(storedUser))
+      }
+    } catch (_) {}
     setLoading(false)
     fetchUsers()
     fetchGestores()
@@ -179,14 +186,31 @@ function App() {
     setGestores(mockGestores)
   }
 
+  const handleLogin = (loggedUser) => {
+    setUser(loggedUser)
+    try { localStorage.setItem('auth_user', JSON.stringify(loggedUser)) } catch (_) {}
+  }
+
   const handleLogout = () => {
-    // Função mantida para compatibilidade com o UI
-    console.log('Logout clicado - apenas para demonstração')
+    try { localStorage.removeItem('auth_user') } catch (_) {}
+    setUser(null)
+  }
+
+  // Exibir tela de login quando não autenticado
+  if (!user) {
+    return <Login onLogin={handleLogin} />
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    // Se não estiver editando, criação está desativada
+    if (!editingUser) {
+      showToast('Criação de usuários está desativada', 'secondary')
+      setIsDialogOpen(false)
+      return
+    }
+
     // Preferir backend quando habilitado
     if (USE_BACKEND) {
       try {
@@ -210,30 +234,10 @@ function App() {
             })
           })
           if (!res.ok) throw new Error('Falha ao atualizar no backend')
-        } else {
-          const res = await fetch('/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nome_usuario: formData.nome_usuario,
-              matricula: formData.matricula,
-              setor: formData.setor,
-              nome_gestor: formData.nome_gestor,
-              localizacao: formData.localizacao,
-              desktop_notebook: formData.desktop_notebook,
-              segunda_tela: !!formData.segunda_tela,
-              licenca_office: formData.licenca_office,
-              celular_corporativo: !!formData.celular_corporativo,
-              headset: !!formData.headset,
-              mouse_sem_fio: !!formData.mouse_sem_fio,
-              teclado_sem_fio: !!formData.teclado_sem_fio,
-            })
-          })
-          if (!res.ok) throw new Error('Falha ao criar no backend')
         }
         // Recarregar lista do backend para refletir mudanças
         await fetchUsers()
-        showToast(editingUser ? 'Usuário atualizado' : 'Usuário criado', 'success')
+        showToast('Usuário atualizado', 'success')
         setIsDialogOpen(false)
         resetForm()
         return
@@ -256,20 +260,6 @@ function App() {
       )
       saveUsersToStorage(updatedUsers)
       showToast('Atualizado (modo local)', 'secondary')
-    } else {
-      const nextId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1
-      const newUser = {
-        id: nextId,
-        ...formData,
-        assets: [{
-          celular_corporativo: formData.celular_corporativo,
-          headset: formData.headset,
-          mouse_sem_fio: formData.mouse_sem_fio,
-          teclado_sem_fio: formData.teclado_sem_fio
-        }]
-      }
-      saveUsersToStorage([...users, newUser])
-      showToast('Criado (modo local)', 'secondary')
     }
     setIsDialogOpen(false)
     resetForm()
@@ -385,9 +375,15 @@ function App() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventário de Ativos</h1>
-            <p className="text-gray-600">Itracker T.I</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventário de Ativos</h1>
+              <p className="text-gray-600">Itracker T.I</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">{user?.username}</span>
+              <Button variant="outline" onClick={handleLogout}>Sair</Button>
+            </div>
           </div>
         </div>
 
@@ -611,11 +607,7 @@ function App() {
                   Limpar Filtros
                 </Button>
                 
-                {isAdmin && (
-                  <Button className="h-12 shrink-0" onClick={openNewUserDialog}>
-                    Novo Usuário
-                  </Button>
-                )}
+                {/* Criação de usuários desativada por requisito */}
               </div>
             </div>
           </CardContent>
@@ -697,26 +689,7 @@ function App() {
                       </div>
                     </div>
                     
-                    {isAdmin && (
-                      <div className="flex gap-2" role="group">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); handleEdit(user) }}
-                          title="Editar"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); openConfirmDelete(user) }}
-                          className="border border-gray-300 bg-white text-red-600 hover:text-red-700 hover:bg-gray-50 px-2 py-1 rounded-md pointer-events-auto relative z-10 cursor-pointer"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
+                    {/* Controles de edição/exclusão desativados (somente leitura) */}
                   </div>
                 </CardContent>
               </Card>
