@@ -52,7 +52,6 @@ function App() {
     } catch (_) {}
     setLoading(false)
     fetchUsers()
-    fetchGestores()
   }, [])
 
 
@@ -91,6 +90,17 @@ function App() {
     setSetores(uniqueSetores)
   }, [users])
 
+  // Atualizar lista de gestores dinamicamente a partir dos usuários
+  useEffect(() => {
+    const uniqueGestores = Array.from(
+      new Set(
+        (users || [])
+          .map(u => (u && typeof u.nome_gestor === 'string' ? u.nome_gestor.trim() : ''))
+          .filter(g => g && g.length > 0)
+      )
+    ).sort((a, b) => a.localeCompare(b))
+    setGestores(uniqueGestores)
+  }, [users])
 
 
   const saveUsersToStorage = (list) => {
@@ -179,12 +189,7 @@ function App() {
     saveUsersToStorage(mockUsers)
   }
 
-  // Removido: fetchSetores (setores agora são derivados de users)
-
-  const fetchGestores = async () => {
-    const mockGestores = ['Maria Santos', 'Carlos Lima', 'Lucia Ferreira', 'Roberto Silva', 'Ana Paula']
-    setGestores(mockGestores)
-  }
+  // Removido: fetchGestores (gestores agora são derivados de users)
 
   const handleLogin = (loggedUser) => {
     setUser(loggedUser)
