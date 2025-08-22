@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Login from '@/components/Login.jsx'
 import { Button } from '@/components/ui/button.jsx'
 import { Input } from '@/components/ui/input.jsx'
@@ -27,8 +27,6 @@ function App() {
   const [showCharts, setShowCharts] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState(null)
-  const [importing, setImporting] = useState(false)
-  const fileInputRef = useRef(null)
   const [formData, setFormData] = useState({
     nome_usuario: '',
     matricula: '',
@@ -64,7 +62,7 @@ function App() {
     if (searchTerm) {
       filtered = filtered.filter(user => 
         user.nome_usuario.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.matricula.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.matricula && user.matricula.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.setor && user.setor.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     }
@@ -399,42 +397,6 @@ function App() {
     setSelectedGestor('')
   }
 
-  // Importação de planilha (admin)
-  const handleImportClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click()
-  }
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files && e.target.files[0]
-    if (!file) return
-    if (!USE_BACKEND) {
-      showToast('Importação requer backend ativo', 'destructive')
-      e.target.value = ''
-      return
-    }
-    try {
-      setImporting(true)
-      const form = new FormData()
-      form.append('file', file)
-      const res = await fetch('/api/import', { method: 'POST', body: form })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        const msg = data?.message || 'Falha ao importar planilha'
-        showToast(msg, 'destructive', 4000)
-        return
-      }
-      // Mostrar resumo
-      const msg = `Importado: ${data.created} criados, ${data.updated} atualizados, ${data.skipped} ignorados.`
-      showToast(msg, 'success', 4000)
-      await fetchUsers()
-    } catch (_) {
-      showToast('Erro ao enviar planilha', 'destructive', 4000)
-    } finally {
-      setImporting(false)
-      if (e.target) e.target.value = ''
-    }
-  }
-
 
   // Removido: exportação em PDF
 
@@ -690,21 +652,9 @@ function App() {
                 </Button>
                 
                 {isAdmin && (
-                  <div className="flex items-center gap-2">
-                    <Button className="h-10 shrink-0" onClick={openNewUserDialog}>
-                      Novo Usuário
-                    </Button>
-                    <Button variant="outline" className="h-10 shrink-0" onClick={handleImportClick} disabled={importing}>
-                      {importing ? 'Importando...' : 'Importar Planilha'}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.csv"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                  </div>
+                  <Button className="h-10 shrink-0" onClick={openNewUserDialog}>
+                    Novo Usuário
+                  </Button>
                 )}
               </div>
             </div>
@@ -724,7 +674,9 @@ function App() {
                       <div className="flex items-center gap-3 mb-3">
                         <Users className="h-5 w-5 text-blue-600" />
                         <h3 className="text-lg font-semibold text-gray-900">{user.nome_usuario}</h3>
-                        <Badge variant="outline">{user.matricula}</Badge>
+                        {user.matricula && (
+                          <Badge variant="outline">{user.matricula}</Badge>
+                        )}
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -835,12 +787,11 @@ function App() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="matricula">Matrícula *</Label>
+                    <Label htmlFor="matricula">Matrícula</Label>
                     <Input
                       id="matricula"
                       value={formData.matricula}
                       onChange={(e) => setFormData({...formData, matricula: e.target.value})}
-                      required
                     />
                   </div>
                   <div>

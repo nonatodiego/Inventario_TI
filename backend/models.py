@@ -9,7 +9,7 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     nome_usuario = db.Column(db.String(100), nullable=False)
-    matricula = db.Column(db.String(20), unique=True, nullable=False)
+    matricula = db.Column(db.String(20), unique=True, nullable=True)
     setor = db.Column(db.String(50))
     nome_gestor = db.Column(db.String(100))
     localizacao = db.Column(db.String(100))
