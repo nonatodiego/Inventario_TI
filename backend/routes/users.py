@@ -13,10 +13,13 @@ def get_users():
         setor = request.args.get('setor', '')
         gestor = request.args.get('gestor', '')
 
-        # Paginação
+        # Paginação (com compatibilidade retroativa)
+        raw_page = request.args.get('page')
+        raw_page_size = request.args.get('page_size')
+        legacy_no_pagination = raw_page is None and raw_page_size is None
         try:
-            page = int(request.args.get('page', 1))
-            page_size = int(request.args.get('page_size', 100))
+            page = int(raw_page) if raw_page is not None else 1
+            page_size = int(raw_page_size) if raw_page_size is not None else 100
             page = 1 if page < 1 else page
             page_size = 1 if page_size < 1 else page_size
         except ValueError:
@@ -40,6 +43,11 @@ def get_users():
 
         if gestor:
             query = query.filter(User.nome_gestor == gestor)
+
+        # Legacy: sem page/page_size na querystring retorna lista plana
+        if legacy_no_pagination:
+            users = query.order_by(User.nome_usuario.asc()).all()
+            return jsonify([user.to_dict() for user in users]), 200
 
         # Total para paginação
         total = query.count()
