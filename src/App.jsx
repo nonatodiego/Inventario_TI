@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge.jsx'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog.jsx'
 import { Checkbox } from '@/components/ui/checkbox.jsx'
 import { Label } from '@/components/ui/label.jsx'
-import { Users, Edit, Trash2, Search, Smartphone, Headphones, Monitor, Laptop, Server, PanelsTopLeft, BarChart3, Mouse, Keyboard, ChevronDown, ChevronUp, FileText, FileSpreadsheet } from 'lucide-react'
+import { Users, Edit, Trash2, Search, Smartphone, Headphones, Monitor, Laptop, Server, Layers, BarChart3, Mouse, Keyboard, ChevronDown, ChevronUp, FileText, FileSpreadsheet } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts'
 import './App.css'
 
@@ -503,7 +503,7 @@ function App() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-center">
-                <PanelsTopLeft className="h-8 w-8 text-orange-600" />
+                <Layers className="h-8 w-8 text-orange-600" />
                 <div className="ml-4 text-center">
                   <Badge variant="secondScreen">Segunda Tela</Badge>
                   <p className="text-2xl font-bold text-gray-900">
@@ -739,7 +739,7 @@ function App() {
                         )}
                         {user.segunda_tela && (
                           <Badge variant="secondScreen" className="flex items-center gap-1">
-                            <PanelsTopLeft className="h-3 w-3" />
+                            <Layers className="h-3 w-3" />
                             Segunda Tela
                           </Badge>
                         )}
